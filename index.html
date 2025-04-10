@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>청소구역 배정 프로그램</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    h1 { font-size: 24px; }
+    .assignment { margin-top: 20px; }
+    .box { border: 1px solid #ccc; padding: 10px; margin: 5px 0; border-radius: 8px; }
+    .admin-login, .admin-panel { margin-top: 30px; }
+    .hidden { display: none; }
+    .editable-box { display: flex; gap: 10px; margin-bottom: 10px; }
+    .editable-box input { padding: 5px; border: 1px solid #ccc; border-radius: 5px; }
+    .editable-section { border: 1px solid #666; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1 id="today-date"></h1>
+  <div class="assignment" id="assignment"></div>
+
+  <div class="admin-login">
+    <button onclick="showAdminLogin()">관리자 로그인</button>
+    <div id="login-form" class="hidden">
+      <input type="password" id="admin-password" placeholder="비밀번호 입력">
+      <button onclick="checkPassword()">확인</button>
+      <p id="login-message"></p>
+    </div>
+  </div>
+
+  <div class="admin-panel hidden" id="admin-panel">
+    <h2>관리자 모드</h2>
+    <div class="editable-section">
+      <h3>청소구역명</h3>
+      <div id="zone-inputs"></div>
+    </div>
+    <div class="editable-section">
+      <h3>학생명</h3>
+      <div id="name-inputs"></div>
+    </div>
+    <button onclick="saveData()">저장</button>
+    <p id="save-message"></p>
+  </div>
+
+  <script>
+    const defaultZones = [
+      "빗자루, 대걸래, 분리수거",
+      "빗자루, 대걸래, 분리수거",
+      "환기, 빗자루, 대걸래",
+      "손걸래, 세절기",
+      "손걸래, 세절기",
+      "교사쓰레기통, 전체 쓰레기통 정리"
+    ];
+
+    const defaultNames = ["박찬진", "이동현", "정지훈", "정한영", "하현일", "허윤재"];
+
+    function hashCode(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    }
+
+    function shuffle(seed) {
+      let array = [1,2,3,4,5,6];
+      let rng = mulberry32(seed);
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      }
+    }
+
+    function getDayName(date) {
+      return ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'][date.getDay()];
+    }
+
+    function getNextCleaningDate(date) {
+      let d = new Date(date);
+      while (![1, 3, 5].includes(d.getDay())) d.setDate(d.getDate() + 1);
+      return d;
+    }
+
+    function loadData() {
+      return {
+        zones: JSON.parse(localStorage.getItem("zones") || JSON.stringify(defaultZones)),
+        names: JSON.parse(localStorage.getItem("names") || JSON.stringify(defaultNames))
+      };
+    }
+
+    function renderAssignment(date = new Date()) {
+      const data = loadData();
+      const today = new Date(date);
+      const todayStr = today.toISOString().split('T')[0];
+      const dayName = getDayName(today);
+      document.getElementById("today-date").innerText = `${todayStr} (${dayName})`;
+
+      let isCleaningDay = [1,3,5].includes(today.getDay());
+      let baseDate = isCleaningDay ? today : getNextCleaningDate(today);
+      const seed = parseInt(hashCode(baseDate.toISOString().split('T')[0]).toString().padStart(6, '0')[5]);
+      const order = shuffle(seed);
+
+      const container = document.getElementById("assignment");
+      container.innerHTML = "";
+
+      if (isCleaningDay) {
+        container.innerHTML = `<h2>오늘의 청소구역 배정표</h2>`;
+      } else {
+        container.innerHTML = `<h2>오늘은 봉사요일이 아닙니다</h2>
+          <p>다음 청소일 : ${baseDate.toISOString().split('T')[0]}</p>
+          <h3>다음 청소구역은 아래와 같습니다</h3>`;
+      }
+
+      order.forEach((num, idx) => {
+        const student = data.names[num - 1];
+        const zone = data.zones[idx];
+        container.innerHTML += `<div class="box">${student} → ${zone}</div>`;
+      });
+    }
+
+    function showAdminLogin() {
+      document.getElementById("login-form").classList.remove("hidden");
+    }
+
+    function checkPassword() {
+      const password = document.getElementById("admin-password").value;
+      if (password === "1214") {
+        document.getElementById("admin-panel").classList.remove("hidden");
+        document.getElementById("login-message").innerText = "";
+        renderAdminInputs();
+      } else {
+        document.getElementById("login-message").innerText = "잘못된 비밀번호입니다";
+      }
+    }
+
+    function renderAdminInputs() {
+      const data = loadData();
+      const zoneContainer = document.getElementById("zone-inputs");
+      const nameContainer = document.getElementById("name-inputs");
+      zoneContainer.innerHTML = "";
+      nameContainer.innerHTML = "";
+      data.zones.forEach((z, i) => {
+        zoneContainer.innerHTML += `<div class="editable-box"><input value="${z}" id="zone-${i}"></div>`;
+      });
+      data.names.forEach((n, i) => {
+        nameContainer.innerHTML += `<div class="editable-box"><input value="${n}" id="name-${i}"></div>`;
+      });
+    }
+
+    function saveData() {
+      const newZones = [];
+      const newNames = [];
+      for (let i = 0; i < 6; i++) {
+        newZones.push(document.getElementById(`zone-${i}`).value);
+        newNames.push(document.getElementById(`name-${i}`).value);
+      }
+      localStorage.setItem("zones", JSON.stringify(newZones));
+      localStorage.setItem("names", JSON.stringify(newNames));
+      document.getElementById("save-message").innerText = "저장되었습니다";
+      renderAssignment();
+    }
+
+    renderAssignment();
+  </script>
+</body>
+</html>
