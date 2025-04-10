@@ -2,13 +2,26 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>청소구역 배정</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    h2 { margin-top: 30px; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+    }
+    h1, h2 {
+      margin-top: 30px;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
     table, th, td {
       border: 1px solid #aaa;
-      border-collapse: collapse;
       padding: 8px;
       text-align: center;
     }
@@ -20,15 +33,31 @@
       border: 1px solid #999;
       padding: 10px;
       margin-bottom: 10px;
+      flex: 1;
     }
     input[type="text"] {
-      width: 90%;
-      padding: 5px;
-      margin: 5px 0;
+      width: 100%;
+      padding: 6px;
+      margin: 4px 0;
+      box-sizing: border-box;
     }
     .highlight {
       background-color: #f0f0f0;
       padding: 10px;
+      margin-bottom: 10px;
+    }
+    .flex-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      table, input[type="text"] {
+        font-size: 14px;
+      }
     }
   </style>
 </head>
@@ -43,7 +72,7 @@
     <p>비밀번호: <input type="password" id="adminPassword" /> <button onclick="checkPassword()">확인</button></p>
     <div id="adminEdit" style="display:none;">
       <h2>청소구역 및 학생명 수정</h2>
-      <div style="display:flex; gap:20px;">
+      <div class="flex-container">
         <div class="box">
           <strong>청소구역</strong><br/>
           <div id="zoneInputs"></div>
@@ -54,7 +83,7 @@
         </div>
       </div>
       <button onclick="saveEdits()">저장</button>
-      <div id="saveMessage"></div>
+      <div id="saveMessage" style="margin-top:10px; color: green;"></div>
     </div>
   </div>
 
